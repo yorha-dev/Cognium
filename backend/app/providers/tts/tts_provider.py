@@ -1,14 +1,17 @@
+import io
+import re
 from os import path, makedirs
 from typing import Any
 from time import perf_counter
-import soundfile as sf
-import io
-import re
-import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
+import soundfile as sf
+import numpy as np
+
 from kittentts import KittenTTS
-from config import MODELS_PATH, check_cfg_file
+
+from config import MODELS_PATH
 
 def markdown_to_tts(text: str) -> str:
     # Code blocks
@@ -47,7 +50,7 @@ def markdown_to_tts(text: str) -> str:
 
     # Remove leftover emphasis markers
     text = text.replace("*", "")
-    
+
     # Normalize whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r"[ \t]+", " ", text)
@@ -56,7 +59,7 @@ def markdown_to_tts(text: str) -> str:
 
 def pcm_2_wav(audio: np.ndarray, samplerate: int = 24000) -> bytes:
     buffer = io.BytesIO()
-    
+
     sf.write(buffer, audio, samplerate, format='WAV')
 
     return buffer.getvalue()
@@ -126,10 +129,10 @@ class KittenttsProvider(TTSProvider):
     @property
     def models(self):
         return [
-            'kitten-tts-mini-0.8',
-            'kitten-tts-micro-0.8',
             'kitten-tts-nano-0.8',
-            'kitten-tts-nano-0.8-int8'
+            'kitten-tts-nano-0.8-int8',
+            'kitten-tts-micro-0.8',
+            'kitten-tts-mini-0.8'
         ]
 
     def get_voices(self, model_name: str):

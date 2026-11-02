@@ -51,4 +51,4 @@ Start the application:
 
 Then open your browser at:
 
-http://localhost:8080
+http://localhost:8000

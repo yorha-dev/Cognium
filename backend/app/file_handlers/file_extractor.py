@@ -1,13 +1,14 @@
-from platform import system
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
+from config import PLATFORM_SLASH
+
 import pymupdf
+
 try:
     from typing import override
 except ImportError:
     from typing_extensions import override
-
-SYSTEM_SLASH = '\\' if system().lower() == 'windows' else '/'
 
 @dataclass
 class Section:
@@ -52,7 +53,7 @@ class PdfExtractor(FileExtractor):
     def get_section(self):
         for page in self._file:
             yield Section(
-                file_name=self._path.split(SYSTEM_SLASH)[-1],
+                file_name=self._path.split(PLATFORM_SLASH)[-1],
                 total_pages=len(self._file),
                 page=page.number,
                 section=None,
@@ -78,7 +79,7 @@ class PlainTxtExtractor(FileExtractor):
                 break
 
         yield Section(
-            file_name=self._path.split(SYSTEM_SLASH)[-1],
+            file_name=self._path.split(PLATFORM_SLASH)[-1],
             total_pages=None,
             page=None,
             section=section,

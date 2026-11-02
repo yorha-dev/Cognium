@@ -6,6 +6,7 @@ from typing import Any
 import asyncio
 
 from providers import AIRegistry, AIProvider, ToolRegistry, MCPClientRegistry
+from error_handler import ErrorHandler
 from .memory_module import AgentMemory
 
 MAX_REPETITIONS = 8
@@ -214,14 +215,19 @@ class AgentExcutor:
                         })
 
             except Exception as err:
-                traceback.print_exc()
+                ErrorHandler().register(
+                event_type="agent_process",
+                error_type="GENERATION_ERROR",
+                description=err,
+                traceback=traceback.format_exc()
+            )
 
                 print(f'\n\033[91m[AGENT]\033[0m Error: {err}\n')
 
                 self.state.status = AgentStatus.FAILED
                 self.state.messages.append({
                     'role': 'assistant',
-                    'content': f'<error>{err}</error>'
+                    'content': f'error:\n{err}'
                 })
 
             self.state.iteration += 1

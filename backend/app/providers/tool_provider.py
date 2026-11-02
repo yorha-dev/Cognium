@@ -3,9 +3,12 @@ import os
 import time
 from datetime import datetime
 import json
+import traceback
+
 from file_handlers.file_extractor import Extractor
 from file_handlers.chunker import chunker
 from providers import AIRegistry, LlamacppProvider, WebSearchRegistry, WebFetchRegistry
+from error_handler import ErrorHandler
 import database as db
 from config import PATH, PLATFORM_SLASH, check_cfg_file
 
@@ -507,7 +510,26 @@ class ImageGenTool(Tool):
         model = AIRegistry().get('sdcpp')
         cfg = check_cfg_file()
 
-        image = model.generate(cfg['diffusion_model'], **kwargs)
+        try:
+            image = model.generate(cfg['diffusion_model'], **kwargs)
+        except Exception:
+            latency = time.perf_counter() - t_init
+
+            ErrorHandler().register(
+                event_type="image_gen_tool",
+                error_type="IMAGE_GENERATION_ERROR",
+                description="Error while generating image.",
+                traceback=traceback.format_exc(),
+                details={'latency': latency}
+            )
+
+            return json.dumps({
+                'metadata': {
+                    'prompt': kwargs.get('prompt', ''),
+                    'latency': latency
+                },
+                'content': "Error: while generating image."
+            })
 
         if PATH[0]:
             generation_path = os.path.join(PATH[0], 'Generated')
@@ -519,7 +541,26 @@ class ImageGenTool(Tool):
         image_name = f'{datetime.now().strftime("%Y-%m-%d_%H_%M_%S")}.png'
         image_path = os.path.join(generation_path, image_name)
 
-        image[0].save(image_path, format='PNG', quality=100)
+        try:
+            image[0].save(image_path, format='PNG', quality=100)
+        except Exception:
+            latency = time.perf_counter() - t_init
+
+            ErrorHandler().register(
+                event_type="image_gen_tool",
+                error_type="SAVE_IMAGE_ERROR",
+                description="Filed to save image.",
+                traceback=traceback.format_exc(),
+                details={'latency': latency}
+            )
+
+            return json.dumps({
+                'metadata': {
+                    'prompt': kwargs.get('prompt', ''),
+                    'latency': latency
+                },
+                'content': "Failed to save image"
+            })
 
         db.create_document({
             'id': None,

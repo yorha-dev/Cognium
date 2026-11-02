@@ -1,1 +1,5 @@
-from .stt_provider import STTProvider, STTRegistry, WhispercppProvider
+from .stt_provider import (
+    STTProvider,
+    STTRegistry,
+    WhispercppProvider
+)

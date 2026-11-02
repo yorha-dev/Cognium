@@ -1,7 +1,8 @@
 import json
-from os import path, listdir
+from os import path
+
 import database as db
-from config import MODELS_PATH, PLATFORM_SLASH, check_cfg_file
+from config import PLATFORM_SLASH, check_cfg_file
 from providers import AIProvider, AIRegistry
 
 GREEN = '\033[92m'

@@ -1,10 +1,12 @@
 import os
 import json
 import time
+import traceback
 
 from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from error_handler import ErrorHandler
 from config import PATH
 
 class MCPClientProvider:
@@ -104,15 +106,27 @@ class MCPClientRegistry:
         with open(config_path, "r", encoding="utf-8") as file:
             try:
                 config = json.load(file)
-            except json.JSONDecodeError as exc:
-                raise ValueError(
-                    f"Invalid MCP configuration: {config_path}"
-                ) from exc
+            except json.JSONDecodeError:
+                ErrorHandler().register(
+                    event_type="mcp_client",
+                    error_type="WRITE_FILE_ERROR",
+                    description="Failed to write MCP parameters into file.",
+                    traceback=traceback.format_exc()
+                )
+
+                raise
 
         servers = config.get("mcpServers", [])
 
         if not isinstance(servers, list):
-            raise ValueError("'mcpServers' must be a list")
+            ErrorHandler().register(
+                event_type="mcp_client",
+                error_type="FILE_STRUCTURE",
+                description="'mcpServers' must be a list",
+                traceback=traceback.format_exc()
+            )
+
+            return
 
         new_providers = []
 

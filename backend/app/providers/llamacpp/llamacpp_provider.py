@@ -1,10 +1,15 @@
 import os
 import base64
-from providers.ai_provider import AIProvider, ModelResponse
+import traceback
+
 from config import MODELS_PATH
+from providers.ai_provider import AIProvider, ModelResponse
+from database import get_document_by_name
+from error_handler import ErrorHandler
+
 from llama_cpp import Llama
 import llama_cpp.llama_chat_format as lcf
-from database import get_document_by_name
+
 try:
     from typing import override
 except ImportError:
@@ -80,7 +85,7 @@ class LlamacppProvider(AIProvider):
             )
 
     @override
-    def _load(self, **config):
+    def _load(self, **config) -> None:
         temp_path = os.path.join(
             MODELS_PATH,
             'Text',
@@ -106,7 +111,7 @@ class LlamacppProvider(AIProvider):
             n_ctx=config.get('n_ctx', 8192)
         )
 
-    def format_ctx(self, ctx):
+    def format_ctx(self, ctx) -> list:
         messages = []
 
         if 'vision' in self._suports:
@@ -153,23 +158,33 @@ class LlamacppProvider(AIProvider):
 
         return messages
 
-    def _convert_img_2_base64(self, img_path: str):
+    def _convert_img_2_base64(self, img_path: str) -> str:
         with open(img_path, 'rb') as img:
             b64_data = base64.b64encode(img.read()).decode('utf-8')
             return f"data:image/{img_path.split('.')[-1]};base64,{b64_data}"
 
     @property
-    def name(self):
+    def name(self) -> list:
         return 'llamacpp'
 
-    def tokenize(self, data: str):
+    def tokenize(self, data: str) -> list[int]:
         if not self._model_path:
             raise RuntimeError("Model not loaded")
 
         if not self._model:
             self.load_model(self._model_path)
 
-        return self._model.tokenize(text=data.encode())
+        try:
+            return self._model.tokenize(text=data.encode())
+        except Exception:
+            ErrorHandler().register(
+                event_type="llamacpp_provider",
+                error_type="TOKENIZER_ERROR",
+                description="Error on tokenizer.",
+                traceback=traceback.format_exc()
+            )
+
+            raise
 
     def _stream_generator(self, stream):
         for chunk in stream:
@@ -225,7 +240,7 @@ class LlamacppEmbedProvider(AIProvider):
         return cls._instance
 
     @override
-    def _load(self, **config):
+    def _load(self, **config) -> None:
         temp_path = os.path.join(
             MODELS_PATH,
             'Embedding',
@@ -247,7 +262,7 @@ class LlamacppEmbedProvider(AIProvider):
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
         return 'embedding'
 
     @override

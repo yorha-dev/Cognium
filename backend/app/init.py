@@ -6,14 +6,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import get_engine
 from routes import router
 from config import ROOT
+from error_handler import ErrorHandler
+from websocket_manager import websocket_manager
 
 WEB_DIR = join(ROOT, 'frontend', 'web')
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    error_handler = ErrorHandler()
+    await error_handler.start(websocket_manager.broadcast)
+
     get_engine()
 
-    yield
+    try:
+        yield
+    finally:
+        await error_handler.stop()
 
 app = FastAPI(lifespan=lifespan)
 

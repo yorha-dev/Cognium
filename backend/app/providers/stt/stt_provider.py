@@ -1,18 +1,17 @@
 from abc import ABC, abstractmethod
-import numpy as np
 import os
-import io
-import wave
+
+import numpy as np
 from pywhispercpp.model import Model
-from config import MODELS_PATH, PLATFORM_SLASH
+from config import MODELS_PATH
 
 class STTProvider(ABC):
     @property
-    def name(self):
+    def name(self) -> str:
         ...
 
     @abstractmethod
-    def transcript(self, **kwargs):
+    def transcript(self, **kwargs) -> str:
         ...
 
 class STTRegistry:
@@ -39,14 +38,14 @@ class WhispercppProvider(STTProvider):
     _instance = None
     _model = None
     _model_path = ''
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
 
         return cls._instance
 
-    def _get_model(self, model_name: str):
+    def _get_model(self, model_name: str) -> None:
         stt_model_path = os.path.join(
             MODELS_PATH,
             'STT',
@@ -71,23 +70,25 @@ class WhispercppProvider(STTProvider):
 
 
     @property
-    def name(self):
+    def name(self) -> str:
         return "whispercpp"
 
-    def transcript(self, **kwargs):
+    def transcript(self, **kwargs) -> str:
         if self._model is None:
             self._get_model(kwargs.get('stt_model'))
 
-        if kwargs.get('audio'):
-            np_array = np.frombuffer(kwargs.get('audio'), dtype=np.int16)
-            np_array = np_array.astype(np.float32) / 32768.0 # pywhispercpp uses float32
+        if not kwargs.get('audio'):
+            return ''
+        
+        np_array = np.frombuffer(kwargs.get('audio'), dtype=np.int16)
+        np_array = np_array.astype(np.float32) / 32768.0 # pywhispercpp uses float32
 
-            segments = self._model.transcribe(
-                np_array
-            )
+        segments = self._model.transcribe(
+            np_array
+        )
 
-            text = ''
-            for segment in segments:
-                text += segment.text
+        text = ''
+        for segment in segments:
+            text += segment.text
 
-            return text
+        return text

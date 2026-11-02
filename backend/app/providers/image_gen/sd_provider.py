@@ -1,7 +1,10 @@
 import os
+
 from providers import AIProvider
 from config import MODELS_PATH
+
 from stable_diffusion_cpp import StableDiffusion
+
 try:
     from typing import override
 except ImportError:
@@ -18,11 +21,11 @@ class SDCppProvider(AIProvider):
         return cls._instance
 
     @property
-    def name(self):
+    def name(self) -> str:
         return 'sdcpp'
 
     @override
-    def _load(self, **config):
+    def _load(self, **config) -> None:
         temp_path = os.path.join(
             MODELS_PATH,
             'Image',
@@ -35,7 +38,7 @@ class SDCppProvider(AIProvider):
             if name.split('.')[-1] in ('gguf', 'safetensors', 'pt'):
                 self._model_path = os.path.join(temp_path, file)
                 break
-        
+
         self._model = StableDiffusion(
             model_path=self._model_path,
             llm_path='',        # For future implementation
@@ -48,11 +51,11 @@ class SDCppProvider(AIProvider):
             verbose=False,
         )
 
-    def _generation_status(self, step: int, steps: int, time: float):
+    def _generation_status(self, step: int, steps: int, time: float) -> None:
         print(f'\033[92m[IMAGE GEN]\033[0m step {step} of {steps}')
 
     @override
-    def generate(self, model_name: str, **config):
+    def generate(self, model_name: str, **config) -> list:
         self.load_model(model_name, **config)
 
         output = self._model.generate_image(

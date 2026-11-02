@@ -5,6 +5,7 @@ try:
 except ImportError:
     from typing_extensions import override
 
+# For future use
 class SearchResult:
     ...
 

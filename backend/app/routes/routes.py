@@ -7,9 +7,11 @@ import traceback
 from platform import system
 from threading import Thread
 
-from fastapi import APIRouter, HTTPException, status, WebSocket, Body, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, WebSocket, WebSocketDisconnect, Body, UploadFile, File
 from fastapi.responses import FileResponse, Response
 
+from websocket_manager import websocket_manager
+from error_handler import ErrorHandler
 from config import PATH, MODELS_PATH, check_cfg_file
 import database as db
 from agent import AgentExcutor
@@ -24,7 +26,7 @@ async def health():
 
 @router.websocket('/ws')
 async def websocket(ws: WebSocket):
-    await ws.accept()
+    await websocket_manager.connect(ws)
 
     queue = asyncio.Queue()
     loop = asyncio.get_running_loop()
@@ -50,133 +52,168 @@ async def websocket(ws: WebSocket):
                 loop
             )
         except Exception:
-            traceback.print_exc()
+            ErrorHandler().register(
+                event_type="agent",
+                error_type="CHAT_PROCESSING_ERROR",
+                description="An error has ocurred during text generation.",
+                traceback=traceback.print_exc()
+            )
 
             asyncio.run_coroutine_threadsafe(
                 queue.put(None),
                 loop
             )
 
-    while True:
-        request = await ws.receive_json()
+    try:
+        while True:
+            request = await ws.receive_json()
 
-        if isinstance(request, dict):
-            chat = db.get_chat(request['chat_id'])
-            if chat is None:
-                chat = db.add_chat(title=request['content'])
-                await ws.send_json({
-                    'chat_id': 0,
-                    'new_id': chat['id']
-                })
-
-            db.add_message(
-                chat['id'],
-                {
-                    'id': None,
-                    'role': 'user',
-                    'content': request['content'],
-                    'attachments': request['attachments'],
-                    'timestamp': None
-                }
-            )
-
-            cfg = check_cfg_file()
-
-            context = [{
-                'role': 'system',
-                'content': cfg['sys_prt']
-            }]
-
-            msgs = db.get_messages(chat['id'])
-
-            if msgs is not None and len(msgs) > 0:
-                for m in msgs:
-                    context.append({
-                        'role': m['role'],
-                        'content': m['content'],
-                        'attachments': [att['name'] for att in m['attachments']]
-                    })
-
-            Thread(
-                target=producer,
-                args=(context,)
-            ).start()
-
-            msg = db.add_message(
-                chat['id'],
-                {
-                    'id': None,
-                    'role': 'assistant',
-                    'content': '',
-                    'attachments': [],
-                    'timestamp': None
-                }
-            )
-
-            if msg is not None:
-                await ws.send_json(msg)
-            else:
-                await ws.send_json({'error': f"Unable to create message on chat {chat['id']}"})
-                continue
-
-            resp = ''
-            atts = []
-            token = 0
-            start = time.perf_counter()
-
-            while True:
-                piece = await queue.get()
-
-                if piece is None:
-                    break
-
-                if piece.content:
-                    if len(atts) == 0 and len(piece.attachments) > 0:
-                        atts.extend(piece.attachments)
-
-                    resp += piece.content
-                    token += 1
-                    delta = time.perf_counter() - start
-
-                    await ws.send_json({
-                        'id': msg['id'],
-                        'chat_id': chat['id'],
-                        'role': 'assistant',
-                        'status': 'generating',
-                        'content': piece.content,
-                        'attachments': piece.attachments,
-                        'metrics': {
-                            'generated': token,
-                            'time': round(delta, 2),
-                            'tps': round(token / delta, 2)
+            if isinstance(request, dict):
+                chat = db.get_chat(request['chat_id'])
+                if chat is None:
+                    chat = db.add_chat(title=request['content'])
+                    await websocket_manager.send_json(
+                        ws, {
+                            "type": "content",
+                            "content": {
+                                'chat_id': 0,
+                                'new_id': chat['id']
+                            }
                         }
+                    )
+
+                db.add_message(
+                    chat['id'],
+                    {
+                        'id': None,
+                        'role': 'user',
+                        'content': request['content'],
+                        'attachments': request['attachments'],
+                        'timestamp': None
+                    }
+                )
+
+                cfg = check_cfg_file()
+
+                context = [{
+                    'role': 'system',
+                    'content': cfg['sys_prt']
+                }]
+
+                msgs = db.get_messages(chat['id'])
+
+                if msgs is not None and len(msgs) > 0:
+                    for m in msgs:
+                        context.append({
+                            'role': m['role'],
+                            'content': m['content'],
+                            'attachments': [att['name'] for att in m['attachments']]
+                        })
+
+                Thread(
+                    target=producer,
+                    args=(context,)
+                ).start()
+
+                msg = db.add_message(
+                    chat['id'],
+                    {
+                        'id': None,
+                        'role': 'assistant',
+                        'content': '',
+                        'attachments': [],
+                        'timestamp': None
+                    }
+                )
+
+                if msg is not None:
+                    await websocket_manager.send_json(ws, {
+                        'type': "content",
+                        'content': msg
                     })
+                else:
+                    ErrorHandler().register(
+                        event_type="chat",
+                        error_type="CREATE_MESSAGE_ERROR",
+                        description=f"Unable to create message on chat {chat['id']}",
+                        traceback=traceback.format_exc()
+                    )
+                    continue
 
-            elapsed = time.perf_counter() - start
-            tokens = len(LlamacppProvider().tokenize(resp))
+                resp = ''
+                atts = []
+                token = 0
+                start = time.perf_counter()
 
-            db.update_message(
-                chat['id'],
-                {
-                    'id': msg['id'],
-                    'role': 'assistant',
-                    'content': resp,
-                    'attachments': atts,
-                    'timestamp': None,
-                }
-            )
+                while True:
+                    piece = await queue.get()
 
-            await ws.send_json({
-                'id': msg['id'],
-                'chat_id': chat['id'],
-                'role': 'assistant',
-                'status': 'completed',
-                'metrics': {
-                    'generated': tokens,
-                    'time': round(elapsed, 2),
-                    'tps': round(tokens / elapsed, 2)
-                }
-            })
+                    if piece is None:
+                        break
+
+                    if piece.content:
+                        if len(atts) == 0 and len(piece.attachments) > 0:
+                            atts.extend(piece.attachments)
+
+                        resp += piece.content
+                        token += len(LlamacppProvider().tokenize(piece.content))
+                        delta = time.perf_counter() - start
+
+                        await websocket_manager.send_json(
+                            ws, {
+                                "type": "content",
+                                "content": {
+                                    'id': msg['id'],
+                                    'chat_id': chat['id'],
+                                    'role': 'assistant',
+                                    'status': 'generating',
+                                    'content': piece.content,
+                                    'attachments': piece.attachments,
+                                    'metrics': {
+                                        'generated': token,
+                                        'time': round(delta, 2),
+                                        'tps': round(token / delta, 2)
+                                    }
+                                }
+                            }
+                        )
+
+                elapsed = time.perf_counter() - start
+                tokens = len(LlamacppProvider().tokenize(resp))
+
+                db.update_message(
+                    chat['id'],
+                    {
+                        'id': msg['id'],
+                        'role': 'assistant',
+                        'content': resp,
+                        'attachments': atts,
+                        'timestamp': None,
+                    }
+                )
+
+                await websocket_manager.send_json(
+                    ws, {
+                        "type": "content",
+                        "content": {
+                            'id': msg['id'],
+                            'chat_id': chat['id'],
+                            'role': 'assistant',
+                            'status': 'completed',
+                            'metrics': {
+                                'generated': tokens,
+                                'time': round(elapsed, 2),
+                                'tps': round(tokens / elapsed, 2)
+                            }
+                        }
+                    }
+                )
+
+    except WebSocketDisconnect:
+        pass
+
+    finally:
+        websocket_manager.disconnect(ws)
 
 @router.get("/uploads/{file_name}")
 async def get_file(file_name: str):
@@ -213,7 +250,7 @@ async def upload_files(
         uploads_path = os.path.join(d, 'Upload')
 
     if uploads_path == '':
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not find a DATA path"
         )
@@ -232,10 +269,10 @@ async def upload_files(
             ) as buffer:
                 shutil.copyfileobj(file.file, buffer)
         except Exception as err:
-            return HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error while handle file {file.filename} -> {err}"
-            )
+            ) from err
 
         db.create_document({
             'id': None,
@@ -273,13 +310,13 @@ async def delete_file(file_name: str = Body(..., embed=True)):
             })
 
             return {'detail': f"File {file_name} deleted"}
-        except PermissionError:
-            return HTTPException(
+        except PermissionError as err:
+            raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"File {file_name} has no deletion permission"
-            )
+            ) from err
 
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"Unable to reach the file {file_name}"
     )
@@ -473,7 +510,7 @@ async def create_chat():
     if result is not None:
         return result
 
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Chat could not be saved"
     )
@@ -483,7 +520,7 @@ async def update_chat(chat_id: int, title: str = Body(..., embed=True)):
     if db.update_chat(chat_id, title) is not None:
         return {"detail": f"Chat {chat_id} tltle modified"}
 
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Chat could not be modified"
     )
@@ -493,7 +530,7 @@ async def delete_chat(chat_id: int):
     if db.delete_chat(chat_id=chat_id):
         return {"detail": "Chat successful deleted"}
 
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Chat could not be deleted"
     )
@@ -506,7 +543,7 @@ async def get_chats():
 async def get_chat(chat_id: int):
     chat = db.get_chat(chat_id)
     if chat is None:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Could not find chat with id {chat_id}"
         )
@@ -519,7 +556,7 @@ async def save_message(chat_id: int, msg: MsgModelRequest):
     if result:
         return result
 
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Message could not be saved"
     )

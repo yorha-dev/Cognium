@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from .file_extractor import Section
 
 @dataclass

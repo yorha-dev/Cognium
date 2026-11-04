@@ -8,6 +8,8 @@ from zipfile import ZipFile
 from urllib.request import urlopen
 import tempfile
 
+FRONTEND_VER = 'v0.1.0'
+
 # Color codes
 RED    = "\033[91m"
 GREEN  = "\033[92m"
@@ -79,11 +81,10 @@ def create_envfile() -> None:
 def install_frontend() -> None:
     frontend_link = (
         'https://github.com/yorha-dev/'
-        'cognium-frontend/releases/v0.1.0/download/'
+        f'cognium_frontend/releases/download/{FRONTEND_VER}/'
         'cognium-frontend.zip'
     )
     frontend_path = Path(ROOT / 'frontend' / 'web')
-    temp_path = Path(ROOT / 'temp')
 
     if (frontend_path / 'index.html').exists():
         print(success("Frontend installation found"))
@@ -95,12 +96,13 @@ def install_frontend() -> None:
 
     print(message("Downloading frontend package..."))
 
-    with tempfile.TemporaryDirectory(temp_path) as temp:
-        frontend_tmp = Path(temp / 'web')
-        backup_path = Path(temp / 'backup')
+    with tempfile.TemporaryDirectory() as temp:
+        temp_dir = Path(temp)
+        frontend_tmp = Path(temp_dir / 'web')
+        backup_path = Path(temp_dir / 'backup')
 
         with urlopen(frontend_link, timeout=60) as response:
-            temp_file = Path(temp / 'cognium-frontend.zip')
+            temp_file = Path(temp_dir / 'cognium-frontend.zip')
 
             try:
                 temp_file.write_bytes(response.read())
@@ -176,13 +178,15 @@ def install_frontend() -> None:
 
 # Handles Python venv
 def handle_venv() -> None:
-    if not os.path.exists('.venv'):
+    if not Path('.venv').exists():
         try:
             print(message("Creating virtual environment..."))
+
             subprocess.run(
                 [sys.executable, '-m', 'venv', '.venv'],
                 check=True
             )
+
             print(success("Virtual environment created"))
         except subprocess.CalledProcessError as err:
             raise SystemExit(
@@ -220,14 +224,14 @@ def handle_venv() -> None:
 
 # Handle backend dependencies
 def install_backend_dep() -> None:
-    python_exe = os.path.join(
-        ROOT,
-        '.venv'
-        'Scripts' if PLATFORM == 'windows' else 'bin',
+    python_exe = Path(
+        ROOT /
+        '.venv' /
+        'Scripts' if PLATFORM == 'windows' else 'bin' /
         'python.exe' if PLATFORM == 'windows' else 'python'
     )
 
-    if os.path.exists(python_exe):
+    if Path(python_exe).exists():
         try:
             print(message("Installing backend dependencies..."))
 

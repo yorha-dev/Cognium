@@ -6,7 +6,14 @@ import threading
 import platform as pl
 import subprocess
 from dotenv import load_dotenv
-from install import check_system, install, success, error, message
+from install import (
+    check_system,
+    install_frontend,
+    install,
+    success,
+    error,
+    message
+)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PLATFORM = pl.system().lower()
@@ -107,12 +114,16 @@ def main() -> None:
     )
 
     if not os.path.exists(python_venv):
+        print(error("venv not found."))
+
         install()
 
-    index_path = os.path.join(ROOT, 'frontend', 'index.html')
+    index_path = os.path.join(ROOT, 'frontend', 'web', 'index.html')
 
     if not os.path.exists(index_path):
-        install()
+        print(error("frontend not found."))
+
+        install_frontend()
 
     if os.getenv('DB_PERSISTANT', default='false').strip().lower() in ('1', 'y', 'yes', 'true'):
         database = start_db()
@@ -132,7 +143,7 @@ def main() -> None:
         backend.wait()
 
     except KeyboardInterrupt:
-        print('Keyboard unterruption. Aborting...')
+        print('Keyboard interruption. Aborting...')
 
         if PLATFORM == 'windows':
             if backend:

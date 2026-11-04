@@ -16,6 +16,7 @@ load_dotenv(os.path.join(ROOT, ".env"))
 
 def start_db():
     print(message("Initializing database..."))
+
     try:
         database = spawn(
             "Database",
@@ -28,10 +29,13 @@ def start_db():
 
         return database
     except Exception as err:
-        raise SystemExit(error(f"Could not create database instance: {err}"))
+        raise SystemExit(
+            error(f"Could not create database instance: {err}")
+        ) from err
 
 def start_backend(py_exe):
     print(message("Initalizing backend..."))
+
     try:
         backend = spawn(
             "Backend",
@@ -41,7 +45,9 @@ def start_backend(py_exe):
 
         return backend
     except Exception as err:
-        raise SystemExit(error(f"Could not create backend instance: {err}"))
+        raise SystemExit(
+            error(f"Could not create backend instance: {err}")
+        ) from err
 
 def spawn(name, args, cwd):
     process = subprocess.Popen(
@@ -60,11 +66,11 @@ def spawn(name, args, cwd):
 
     return process
 
-def pipe_reader(name, process):
+def pipe_reader(name, process) -> None:
     for line in process.stdout:
         print(f"[{success(name)}] {line}", end="")
 
-def wait_port(host, port, process, timeout=30):
+def wait_port(host, port, process, timeout=30) -> None:
     start = time.time()
 
     while time.time() - start < timeout:
@@ -84,7 +90,7 @@ def wait_port(host, port, process, timeout=30):
         error(f"Timed out waiting for {host}:{port}")
     )
 
-def main():
+def main() -> None:
     check_system()
 
     database = None
@@ -126,7 +132,7 @@ def main():
         backend.wait()
 
     except KeyboardInterrupt:
-        print('Keyboard unterruption')
+        print('Keyboard unterruption. Aborting...')
 
         if PLATFORM == 'windows':
             if backend:
@@ -140,8 +146,6 @@ def main():
 
             if database:
                 database.send_signal(signal.SIGINT)
-
-            os.system("stty sane")
 
 if __name__ == "__main__":
     main()

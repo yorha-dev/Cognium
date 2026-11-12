@@ -14,7 +14,7 @@ def get_engine():
 
 def init_db():
     echo = bool(DbConfig.DB_ECHO and DbConfig.DB_ECHO in CONSTRAINT)
-    if DbConfig.DB_PERSISTANT.strip().lower() in CONSTRAINT:
+    if DbConfig.DB_PERSISTENT.strip().lower() in CONSTRAINT:
         url = (
             f"postgresql+psycopg://"
             f"{DbConfig.DB_USER}:{DbConfig.DB_PASSWORD}"

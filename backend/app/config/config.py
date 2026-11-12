@@ -31,7 +31,7 @@ class DbConfig:
     DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-    DB_PERSISTANT = os.getenv('DB_PERSISTANT', default="true")
+    DB_PERSISTENT = os.getenv('DB_PERSISTENT', default="true")
     DB_ECHO = os.getenv('DB_ECHO', default="false")
 
 def check_cfg_file():

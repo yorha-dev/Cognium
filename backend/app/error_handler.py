@@ -3,15 +3,32 @@ import logging
 from dataclasses import dataclass
 from typing import Callable, Awaitable
 from datetime import datetime, timezone
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+class ErrorCategory(Enum):
+    NETWORK = 'network'
+    DATABASE = 'database'
+    INFERENCE = 'inference'
+    FILE = 'file'
+    INTERNAL = 'internal'
+    UNKNOW = 'unknow'
+
+class ErrorSeverity(Enum):
+    INFO = 'info'
+    WARNING = 'warning'
+    ERROR = 'error'
+    CRITICAL = 'critical'
+
 @dataclass
 class Error:
-    event_type: str
-    error_type: str
+    category: ErrorCategory
+    severity: ErrorSeverity
+    code: str
+    detail: str
     description: str
-    details: dict
+    source: str
     traceback: str
     timestamp: str
 
@@ -42,21 +59,25 @@ class ErrorHandler:
 
     def register(
         self,
-        event_type:str,
-        error_type: str,
+        category: ErrorCategory,
+        severity: ErrorSeverity,
+        code: str,
+        detail: str,
         description: str,
+        source: str,
         traceback: str,
-        details: dict | None = None
     ) -> None:
         if self._loop is None or self._queue is None:
             logger.error("ErrorHandler has not started")
             return
 
         error = Error(
-            event_type=event_type,
-            error_type=error_type,
+            category=category,
+            severity=severity,
+            code=code,
+            detail=detail,
             description=description,
-            details=details or {},
+            source=source,
             traceback=traceback,
             timestamp=datetime.now(timezone.utc).isoformat()
         )
@@ -78,10 +99,13 @@ class ErrorHandler:
                 payload = {
                     'type': "error",
                     'content': {
-                        'event_type': error.event_type,
-                        'error_type': error.error_type,
+                        'category': str(error.category),
+                        'severity': str(error.severity),
+                        'code': error.code,
+                        'detail': str(error.detail),
                         'description': error.description,
-                        'details': error.details,
+                        'source': error.source,
+                        'traceback': error.traceback,
                         'timestamp': error.timestamp
                     }
                 }

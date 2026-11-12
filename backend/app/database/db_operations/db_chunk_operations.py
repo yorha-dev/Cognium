@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 import numpy as np
 
 from config import DbConfig, CONSTRAINT
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler,ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Chunk, Document
 
@@ -33,10 +33,13 @@ def save_chunk(document_id: int, data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="save_chunk",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to save chunk.",
+                source="save_chunk",
+                traceback=traceback.format_exception(e)
             )
 
         return chunk.model_dump()
@@ -55,10 +58,13 @@ def delete_chunks(document_id: int) -> None:
             session.rollback()
 
             ErrorHandler().register(
-                event_type="delete_chunk",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to delete chunks",
+                source="delete_chunk",
+                traceback=traceback.format_exception(e)
             )
 
 def get_chunk(document_id: int, index: int):

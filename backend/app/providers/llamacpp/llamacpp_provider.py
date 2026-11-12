@@ -5,7 +5,7 @@ import traceback
 from config import MODELS_PATH
 from providers.ai_provider import AIProvider, ModelResponse
 from database import get_document_by_name
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 
 from llama_cpp import Llama
 import llama_cpp.llama_chat_format as lcf
@@ -48,37 +48,44 @@ class LlamacppProvider(AIProvider):
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'llava-v1.5' in model_path:
+
+        if 'llava-v1.5' in model_path:
             return lcf.Llava15ChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'llava-v1.6' in model_path:
+
+        if 'llava-v1.6' in model_path:
             return lcf.Llava16ChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'moondream2' in model_path:
+
+        if 'moondream2' in model_path:
             return lcf.MoondreamChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'nanollava' in model_path:
+
+        if 'nanollava' in model_path:
             return lcf.NanoLlavaChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'llama-3-vision-alpha' in model_path:
+
+        if 'llama-3-vision-alpha' in model_path:
             return lcf.Llama3VisionAlphaChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'minicpm-v-2.6' in model_path:
+
+        if 'minicpm-v-2.6' in model_path:
             return lcf.MiniCPMv26ChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
             )
-        elif 'gemma-4' in model_path:
+
+        if 'gemma-4' in model_path:
             return lcf.Gemma4ChatHandler(
                 clip_model_path=mmproj_path,
                 verbose=False
@@ -176,12 +183,15 @@ class LlamacppProvider(AIProvider):
 
         try:
             return self._model.tokenize(text=data.encode())
-        except Exception:
+        except Exception as err:
             ErrorHandler().register(
-                event_type="llamacpp_provider",
-                error_type="TOKENIZER_ERROR",
+                category=ErrorCategory.INFERENCE,
+                severity=ErrorSeverity.ERROR,
+                code="TOKENIZER_ERROR",
+                detail=str(err),
                 description="Error on tokenizer.",
-                traceback=traceback.format_exc()
+                source="llamacpp_provider",
+                traceback=traceback.format_exception(err)
             )
 
             raise

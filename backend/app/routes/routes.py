@@ -7,15 +7,30 @@ import traceback
 from platform import system
 from threading import Thread
 
-from fastapi import APIRouter, HTTPException, status, WebSocket, WebSocketDisconnect, Body, UploadFile, File
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    status,
+    WebSocket,
+    WebSocketDisconnect,
+    Body,
+    UploadFile,
+    File
+)
 from fastapi.responses import FileResponse, Response
 
 from websocket_manager import websocket_manager
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from config import PATH, MODELS_PATH, check_cfg_file
 import database as db
 from agent import AgentExcutor
-from providers import LlamacppProvider, TTSRegistry, MCPClientRegistry, STTRegistry, markdown_to_tts
+from providers import (
+    LlamacppProvider,
+    TTSRegistry,
+    MCPClientRegistry,
+    STTRegistry,
+    markdown_to_tts
+)
 from .api_schema import MsgModelRequest, ConfigRequest, MCPConfigRequest, TTSRequest
 
 router = APIRouter()
@@ -51,12 +66,15 @@ async def websocket(ws: WebSocket):
                 queue.put(None),
                 loop
             )
-        except Exception:
+        except Exception as err:
             ErrorHandler().register(
-                event_type="agent",
-                error_type="CHAT_PROCESSING_ERROR",
+                category= ErrorCategory.INFERENCE,
+                severity=ErrorSeverity.ERROR,
+                code="CHAT_PROCESSING_ERROR",
+                detail=str(err),
                 description="An error has ocurred during text generation.",
-                traceback=traceback.print_exc()
+                source="producer",
+                traceback=traceback.print_exception(err)
             )
 
             asyncio.run_coroutine_threadsafe(
@@ -133,9 +151,12 @@ async def websocket(ws: WebSocket):
                     })
                 else:
                     ErrorHandler().register(
-                        event_type="chat",
-                        error_type="CREATE_MESSAGE_ERROR",
+                        category=ErrorCategory.DATABASE,
+                        severity=ErrorSeverity.WARNING,
+                        code="CREATE_MESSAGE_ERROR",
+                        detail=f"Unable to create message on chat {chat['id']}",
                         description=f"Unable to create message on chat {chat['id']}",
+                        source="database",
                         traceback=traceback.format_exc()
                     )
                     continue

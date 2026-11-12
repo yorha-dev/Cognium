@@ -93,8 +93,9 @@ def wait_port(host, port, process, timeout=30) -> None:
         except OSError:
             time.sleep(0.5)
 
-    raise TimeoutError(
-        error(f"Timed out waiting for {host}:{port}")
+    message(
+        f"Timed out waiting for {host}:{port}"
+        "Ctrl + C to terminate"
     )
 
 def main() -> None:

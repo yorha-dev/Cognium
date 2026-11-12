@@ -2,7 +2,7 @@ import traceback
 
 from sqlmodel import Session, select
 
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Summary, Document
 
@@ -21,10 +21,13 @@ def save_summary(document_id: int, **data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="save_summary",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to save summary",
+                source="save_summary",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(summary)

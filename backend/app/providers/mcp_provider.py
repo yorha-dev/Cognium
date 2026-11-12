@@ -6,7 +6,7 @@ import traceback
 from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from config import PATH
 
 class MCPClientProvider:
@@ -106,12 +106,15 @@ class MCPClientRegistry:
         with open(config_path, "r", encoding="utf-8") as file:
             try:
                 config = json.load(file)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as err:
                 ErrorHandler().register(
-                    event_type="mcp_client",
-                    error_type="WRITE_FILE_ERROR",
+                    category=ErrorCategory.INTERNAL,
+                    severity=ErrorSeverity.ERROR,
+                    code="WRITE_FILE_ERROR",
+                    detail=str(err),
                     description="Failed to write MCP parameters into file.",
-                    traceback=traceback.format_exc()
+                    source="mcp_client",
+                    traceback=traceback.format_exception(err)
                 )
 
                 raise
@@ -120,9 +123,12 @@ class MCPClientRegistry:
 
         if not isinstance(servers, list):
             ErrorHandler().register(
-                event_type="mcp_client",
-                error_type="FILE_STRUCTURE",
-                description="'mcpServers' must be a list",
+                category=ErrorCategory.INTERNAL,
+                severity=ErrorSeverity.ERROR,
+                code="FILE_STRUCTURE_ERROR",
+                detail="'mcpServers' must be a list",
+                description="'mcpServers' must be a list.",
+                source="mcp_client",
                 traceback=traceback.format_exc()
             )
 

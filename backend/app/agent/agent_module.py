@@ -6,7 +6,7 @@ from typing import Any
 import asyncio
 
 from providers import AIRegistry, AIProvider, ToolRegistry, MCPClientRegistry
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from .memory_module import AgentMemory
 
 MAX_REPETITIONS = 8
@@ -216,10 +216,13 @@ class AgentExcutor:
 
             except Exception as err:
                 ErrorHandler().register(
-                event_type="agent_process",
-                error_type="GENERATION_ERROR",
-                description=err,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.INFERENCE,
+                severity=ErrorSeverity.ERROR,
+                code="GENERATION_ERROR",
+                detail=str(err),
+                description='An error has occurred on inference.',
+                source="agent",
+                traceback=traceback.format_exception(err)
             )
 
                 print(f'\n\033[91m[AGENT]\033[0m Error: {err}\n')

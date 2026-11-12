@@ -3,7 +3,7 @@ import traceback
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Message, Chat, Attachment
 from .db_document_operations import get_document_by_name
@@ -43,10 +43,13 @@ def add_message(chat_id: int, data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="add_message",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to save message",
+                source="add_message",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(msg) # OPITIONAL
@@ -89,10 +92,13 @@ def update_message(chat_id: int, data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="update_message",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to update message",
+                source="update_message",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(msg)

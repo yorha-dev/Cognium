@@ -2,7 +2,7 @@ import traceback
 
 from sqlmodel import Session, select
 
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Chat
 
@@ -18,10 +18,13 @@ def add_chat(title: str = None):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="add_chat",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description=f"Failed to save chat {title if title else ''}",
+                source="add_chat",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(new_chat)
@@ -46,10 +49,13 @@ def update_chat(chat_id: int, title):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="update_chat",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description=f"Failed to update chat {chat_id}",
+                source="update_chat",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(chat)
@@ -68,10 +74,13 @@ def delete_chat(chat_id: int) -> bool:
             session.rollback()
 
             ErrorHandler().register(
-                event_type="delete_chat",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description=f'Failed to delete chat {chat_id}',
+                source="delete_chat",
+                traceback=traceback.format_exception(e)
             )
 
         return bool(session.get(Chat, chat_id) is None)

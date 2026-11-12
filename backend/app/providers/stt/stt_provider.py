@@ -68,7 +68,6 @@ class WhispercppProvider(STTProvider):
 
             self._model = Model(self._model_path)
 
-
     @property
     def name(self) -> str:
         return "whispercpp"
@@ -79,7 +78,7 @@ class WhispercppProvider(STTProvider):
 
         if not kwargs.get('audio'):
             return ''
-        
+
         np_array = np.frombuffer(kwargs.get('audio'), dtype=np.int16)
         np_array = np_array.astype(np.float32) / 32768.0 # pywhispercpp uses float32
 

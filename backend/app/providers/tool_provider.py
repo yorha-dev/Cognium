@@ -7,8 +7,13 @@ import traceback
 
 from file_handlers.file_extractor import Extractor
 from file_handlers.chunker import chunker
-from providers import AIRegistry, LlamacppProvider, WebSearchRegistry, WebFetchRegistry
-from error_handler import ErrorHandler
+from providers import (
+    AIRegistry,
+    LlamacppProvider,
+    WebSearchRegistry,
+    WebFetchRegistry
+)
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 import database as db
 from config import PATH, PLATFORM_SLASH, check_cfg_file
 
@@ -512,15 +517,17 @@ class ImageGenTool(Tool):
 
         try:
             image = model.generate(cfg['diffusion_model'], **kwargs)
-        except Exception:
+        except Exception as err:
             latency = time.perf_counter() - t_init
 
             ErrorHandler().register(
-                event_type="image_gen_tool",
-                error_type="IMAGE_GENERATION_ERROR",
+                category=ErrorCategory.INFERENCE,
+                severity=ErrorSeverity.ERROR,
+                code="IMAGE_GENERATION_ERROR",
+                detail=str(err),
                 description="Error while generating image.",
-                traceback=traceback.format_exc(),
-                details={'latency': latency}
+                source="image_gen_tool",
+                traceback=traceback.format_exception(err)
             )
 
             return json.dumps({
@@ -543,15 +550,17 @@ class ImageGenTool(Tool):
 
         try:
             image[0].save(image_path, format='PNG', quality=100)
-        except Exception:
+        except Exception as err:
             latency = time.perf_counter() - t_init
 
             ErrorHandler().register(
-                event_type="image_gen_tool",
-                error_type="SAVE_IMAGE_ERROR",
+                category=ErrorCategory.FILE,
+                severity=ErrorSeverity.ERROR,
+                code="SAVE_IMAGE_ERROR",
+                detail=str(err),
                 description="Filed to save image.",
-                traceback=traceback.format_exc(),
-                details={'latency': latency}
+                source="image_gen_tool",
+                traceback=traceback.format_exception(err)
             )
 
             return json.dumps({

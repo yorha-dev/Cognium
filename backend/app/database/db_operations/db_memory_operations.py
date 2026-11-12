@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 import numpy as np
 
 from config import DbConfig, CONSTRAINT
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Memory
 
@@ -26,10 +26,13 @@ def create_memory(**data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="create_memory",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to save memory.",
+                source="create_memory",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(mem)
@@ -54,10 +57,13 @@ def update_memory(mem_id: int, **data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="update_memory",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to update memory.",
+                source="update_memory",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(mem)
@@ -71,7 +77,7 @@ def delete_memory(mem_id: int) -> bool:
         )).one_or_none()
 
         if mem is None:
-            return None
+            return False
 
         session.delete(mem)
 
@@ -81,10 +87,13 @@ def delete_memory(mem_id: int) -> bool:
             session.rollback()
 
             ErrorHandler().register(
-                event_type="delete_memory",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to delete memory",
+                source="delete_memory",
+                traceback=traceback.format_exception(e)
             )
 
         return bool(session.get(Memory, mem.id))

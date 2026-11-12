@@ -2,7 +2,7 @@ import traceback
 
 from sqlmodel import Session, select
 
-from error_handler import ErrorHandler
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
 from database.db_conn import get_engine
 from database.db_schema import Document, Attachment
 
@@ -25,10 +25,13 @@ def create_document(data):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="create_document",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description=f"Failed to save document {data['name']}",
+                source="create_document",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(doc)
@@ -58,10 +61,13 @@ def update_document(file_name: str, new_data: str):
             session.rollback()
 
             ErrorHandler().register(
-                event_type="update_document",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description="Failed to update document",
+                source="update_document",
+                traceback=traceback.format_exception(e)
             )
 
         session.refresh(result)
@@ -85,7 +91,7 @@ def delete_document(data) -> bool:
             )).one_or_none()
 
         if doc is None:
-            return None
+            return False
 
         session.delete(doc)
 
@@ -95,10 +101,13 @@ def delete_document(data) -> bool:
             session.rollback()
 
             ErrorHandler().register(
-                event_type="delete_document",
-                error_type="DATABASE_COMMIT_ERROR",
-                description=e,
-                traceback=traceback.format_exc()
+                category=ErrorCategory.DATABASE,
+                severity=ErrorSeverity.ERROR,
+                code="DATABASE_COMMIT_ERROR",
+                detail=str(e),
+                description=f"Failed to delete document {data}",
+                source="delete_document",
+                traceback=traceback.format_exception(e)
             )
 
         return bool(session.get(Document, doc.id))

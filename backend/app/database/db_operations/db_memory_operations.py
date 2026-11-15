@@ -100,7 +100,7 @@ def delete_memory(mem_id: int) -> bool:
 
 def search_memory(query, top_k: int) -> list:
     with Session(get_engine()) as session:
-        if DbConfig.DB_PERSISTANT in CONSTRAINT:
+        if DbConfig.DB_PERSISTENT in CONSTRAINT:
             memories = session.exec(select(Memory).order_by(
                 # Common use is Memory.embedding.cosine_distance(...)
                 # Used an alternative to avoid error lint on IDE

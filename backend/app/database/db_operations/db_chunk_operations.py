@@ -86,7 +86,7 @@ def get_chunks(document_id: int) -> list:
 
 def chunk_similarity_search(document_id: int, query, top_k: int) -> list:
     with Session(get_engine()) as session:
-        if DbConfig.DB_PERSISTANT in CONSTRAINT:
+        if DbConfig.DB_PERSISTENT in CONSTRAINT:
             chunks = session.exec(select(Chunk).where(
                 Chunk.document_id == document_id
             ).order_by(

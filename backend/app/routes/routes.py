@@ -280,9 +280,11 @@ async def upload_files(
         print(f"File mime: {file.content_type}")
         print(f"Save into: {uploads_path}")
 
+        file_path = os.path.join(uploads_path, file.filename.split(PLATFORM_SLASH)[-1])
+
         try:
             with open(
-                os.path.join(uploads_path, file.filename.split(PLATFORM_SLASH)[-1]),
+                file_path,
                 'wb'
             ) as buffer:
                 shutil.copyfileobj(file.file, buffer)
@@ -292,14 +294,22 @@ async def upload_files(
                 detail=f"Error while handle file {file.filename} -> {err}"
             ) from err
 
-        db.create_document({
+        saved = db.create_document({
             'id': None,
             'hash': None, # Make file hash here
             'name': file.filename,
             'size': file.size,
-            'uri': os.path.join(uploads_path, file.filename),
-            'timestamp': None # Create timestamp here
+            'uri': file_path,
+            'timestamp': None
         })
+
+        if not saved:
+            os.remove(file_path)
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"'{file.filename}' could not be saved"
+            )
 
     return {'detail': "Data received"}
 

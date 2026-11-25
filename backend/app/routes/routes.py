@@ -21,7 +21,12 @@ from fastapi.responses import FileResponse, Response
 
 from websocket_manager import websocket_manager
 from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
-from config import PATH, MODELS_PATH, check_cfg_file
+from config import (
+    PATH,
+    MODELS_PATH,
+    PLATFORM_SLASH,
+    check_cfg_file
+)
 import database as db
 from agent import AgentExcutor
 from providers import (
@@ -263,29 +268,21 @@ async def get_docs():
 async def upload_files(
     data: list[UploadFile] = File(...)
 ):
-    uploads_path = ''
-    for d in PATH:
-        if not d or not os.path.exists(d):
-            continue
+    data_dir = PATH[0] if PATH[0] else PATH[1]
+    
+    uploads_path = os.path.join(data_dir, 'Upload')
 
-        uploads_path = os.path.join(d, 'Upload')
-
-    if uploads_path == '':
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not find a DATA path"
-        )
-
-    for file in data:
+    if not os.path.exists(uploads_path):
         os.makedirs(uploads_path, exist_ok=True)
-
+    
+    for file in data:
         print(f"File name: {file.filename}")
         print(f"File mime: {file.content_type}")
         print(f"Save into: {uploads_path}")
 
         try:
             with open(
-                os.path.join(uploads_path, file.filename),
+                os.path.join(uploads_path, file.filename.split(PLATFORM_SLASH)[-1]),
                 'wb'
             ) as buffer:
                 shutil.copyfileobj(file.file, buffer)

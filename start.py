@@ -93,10 +93,7 @@ def wait_port(host, port, process, timeout=30) -> None:
         except OSError:
             time.sleep(0.5)
 
-    message(
-        f"Timed out waiting for {host}:{port}"
-        "Ctrl + C to terminate"
-    )
+    raise TimeoutError(error(f"Timed out waiting for {host}:{port}"))
 
 def main() -> None:
     check_system()
@@ -126,14 +123,27 @@ def main() -> None:
 
         install_frontend()
 
-    if os.getenv('DB_PERSISTANT', default='false').strip().lower() in ('1', 'y', 'yes', 'true'):
+    if os.getenv('DB_PERSISTENT', default='false').strip().lower() in ('1', 'y', 'yes', 'true'):
         database = start_db()
 
-        wait_port("127.0.0.1", os.getenv('DB_PORT'), database, timeout=120)
+        try:
+            port = int(os.getenv('DB_PORT', '5432'))
+            wait_port("127.0.0.1", port, database, timeout=120)
+        except TimeoutError as err:
+            if database:
+                database.send_signal(signal.CTRL_BREAK_EVENT)
+
+            raise err
 
     backend = start_backend(python_venv)
 
-    wait_port('127.0.0.1', 8000, backend)
+    try:
+        wait_port('127.0.0.1', 8000, backend)
+    except TimeoutError as err:
+        if backend:
+            backend.send_signal(signal.CTRL_BREAK_EVENT)
+
+        raise err
 
     print(success("All done"))
 

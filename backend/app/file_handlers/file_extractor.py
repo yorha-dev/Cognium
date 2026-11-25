@@ -78,13 +78,13 @@ class PlainTxtExtractor(FileExtractor):
             if not buffer:
                 break
 
-        yield Section(
-            file_name=self._path.split(PLATFORM_SLASH)[-1],
-            total_pages=None,
-            page=None,
-            section=section,
-            text=buffer
-        )
+            yield Section(
+                file_name=self._path.split(PLATFORM_SLASH)[-1],
+                total_pages=None,
+                page=None,
+                section=section,
+                text=buffer
+            )
 
 class Extractor:
     @staticmethod

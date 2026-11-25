@@ -8,6 +8,8 @@ os.chdir(os.path.join(
     '..', '..', '..' 
 ))
 
+load_dotenv(os.path.join(ROOT, '.env'))
+
 CONSTRAINT = ('1', 'y', 'yes', 'true')
 
 ROOT = os.path.abspath(os.curdir)
@@ -20,8 +22,6 @@ MODELS_PATH = os.path.join(
     PATH[0] if PATH[0] else PATH[1],
     'Models'
 )
-
-load_dotenv(os.path.join(ROOT, '.env'))
 
 class DbConfig:
     DB_HOST = os.getenv('DB_HOST')
@@ -41,5 +41,7 @@ def check_cfg_file():
     if not os.path.exists(cfg_path):
         os.makedirs(cfg_path, exist_ok=True)
 
-    with open(os.path.join(cfg_path, 'config.json'), 'r', encoding='UTF-8') as cfg_file:
+    with open(os.path.join(cfg_path, 'config.json'), 'a+', encoding='UTF-8') as cfg_file:
+        cfg_file.seek(0)
+
         return json.loads(cfg_file.read())

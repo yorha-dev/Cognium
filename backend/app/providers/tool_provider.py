@@ -134,6 +134,10 @@ class RagTool(Tool):
 
         candidates = db.get_chunks(att['id'])
 
+        # [IMPORTANT]
+        # Add embedding_model verification and make abstraction
+        # to handle chunks in database with chunk count and total
+        # to make document chunking transactional and recoverable
         if not candidates:
             file = Extractor.get(att['uri'])
             section = file.get_section()
@@ -171,7 +175,7 @@ class RagTool(Tool):
                 'chunks': len(candidates)
             },
             'content': [{
-                'page': candidate['page'] + 1,
+                'page': candidate.get('page', 0) + 1,
                 'index': candidate['index'],
                 'text': candidate['text']
             } for candidate in candidates]
@@ -308,7 +312,7 @@ class SummarizeTool(Tool):
                 'file_name': doc['name'],
                 'latency': time.perf_counter() - t_init
             },
-            'content': raw_summary
+            'content': refined_summary
         })
 
 class WebSearchTool(Tool):

@@ -65,7 +65,7 @@ def create_envfile() -> None:
     DB_NAME='chat'
     DB_USER='user'
     DB_PASSWORD='password'
-    DB_PERSISTANT='true'
+    DB_PERSISTENT='true'
     DB_ECHO='false'
     """
 
@@ -227,8 +227,8 @@ def install_backend_dep() -> None:
     python_exe = Path(
         ROOT /
         '.venv' /
-        'Scripts' if PLATFORM == 'windows' else 'bin' /
-        'python.exe' if PLATFORM == 'windows' else 'python'
+        ('Scripts' if PLATFORM == 'windows' else 'bin') /
+        ('python.exe' if PLATFORM == 'windows' else 'python')
     )
 
     if Path(python_exe).exists():

@@ -67,11 +67,12 @@ class AgentState:
     iteration: int = 0
 
 class AgentExcutor:
-    state = AgentState()
-    provider = AIRegistry().get('llamacpp')
-    tools = ToolRegistry()
-    memory = AgentMemory(provider)
-    mcp_registry = MCPClientRegistry()
+    def __init__(self):
+        self.state = AgentState()
+        self.provider = AIRegistry().get('llamacpp')
+        self.tools = ToolRegistry()
+        self.memory = AgentMemory(provider)
+        self.mcp_registry = MCPClientRegistry()
 
     def decide(self, model_name, **cfg):
         ctx = [{

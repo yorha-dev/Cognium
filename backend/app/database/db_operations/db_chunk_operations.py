@@ -1,6 +1,6 @@
 import traceback
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 import numpy as np
 
 from config import DbConfig, CONSTRAINT
@@ -46,11 +46,9 @@ def save_chunk(document_id: int, data):
 
 def delete_chunks(document_id: int) -> None:
     with Session(get_engine()) as session:
-        chunks = session.exec(select(Chunk).where(
+        chunks = session.exec(delete(Chunk).where(
             Chunk.document_id == document_id
-        )).all()
-
-        session.delete(chunks)
+        ))
 
         try:
             session.commit()

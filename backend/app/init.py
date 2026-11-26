@@ -1,13 +1,17 @@
 from os.path import join
 from contextlib import asynccontextmanager
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+
 from database import get_engine
 from routes import router
 from config import ROOT
 from error_handler import ErrorHandler
 from websocket_manager import websocket_manager
+from providers import bootstrap
 
 WEB_DIR = join(ROOT, 'frontend', 'web')
 
@@ -17,6 +21,8 @@ async def lifespan(app: FastAPI):
     await error_handler.start(websocket_manager.broadcast)
 
     get_engine()
+
+    await bootstrap()
 
     try:
         yield

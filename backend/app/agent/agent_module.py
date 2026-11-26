@@ -173,9 +173,27 @@ class AgentExcutor:
 
         self.state.messages = ctx
         self.state.status = AgentStatus.RUNNING
-        self.memory.decide_to_memorize(ctx, model_name, **cfg)
+        
+        try:
+            self.memory.decide_to_memorize(ctx, model_name, **cfg)
+        except Exception as err:
+            ErrorHandler().register(
+                category=ErrorCategory.INFERENCE,
+                severity=ErrorSeverity.ERROR,
+                code="INFERENCE_ERROR",
+                detail=str(err),
+                description='An error has occurred on memory module.',
+                source="decide_to_memoryze",
+                traceback=traceback.format_exception(err)
+            )
 
-        while self.state.status == AgentStatus.RUNNING and self.state.iteration < MAX_REPETITIONS:
+            print(f'\n\033[91m[MEMORY MODULE]\033[0m Error: {err}\n')
+
+        while self.state.status == AgentStatus.RUNNING:
+            if self.state.iteration == MAX_REPETITIONS:
+                self.state.status = AgentStatus.COMPLETED
+                break
+
             decision = self.decide(model_name, **cfg)
             print(f"\033[92m[AGENT]\033[0m {decision.content['content']}")
 
@@ -201,6 +219,7 @@ class AgentExcutor:
                             **tool_args
                         )
 
+                    # Change JSON format to string
                     tool_content = json.loads(tool_response).get('content')
 
                     if tool_response:
@@ -209,10 +228,10 @@ class AgentExcutor:
                                 'name': tool_content['image_name']
                             })
 
+                        # Add tool response class to handle diferent templates
                         self.state.messages.append({
                             'role': 'assistant',
-                            'name': tool_name,
-                            'content': f'<tool_response>{tool_content}</tool_response>'
+                            'content': f'Tool response: {tool_content}'
                         })
 
             except Exception as err:

@@ -17,7 +17,6 @@ except ImportError:
 
 class LlamacppProvider(AIProvider):
     _instance = None
-    _suports = ['text', 'tokenize']
 
     def __new__(cls):
         if cls._instance is None:
@@ -25,6 +24,9 @@ class LlamacppProvider(AIProvider):
             return cls._instance
 
         return cls._instance
+
+    def __init__(self):
+        self._suports = ['text', 'tokenize']
 
     def _load_mmproj(self):
         model_dir = os.path.dirname(self._model_path)

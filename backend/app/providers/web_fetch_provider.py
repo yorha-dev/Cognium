@@ -1,7 +1,21 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
+import socket
+
 from trafilatura import fetch_url, extract
+
+def get_local_ip() -> str:
+    soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        soc.connect(('8.8.8.8', 80))
+        ip = soc.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        soc.close()
+
+    return ip
 
 @dataclass
 class WebFetchResponse:
@@ -52,9 +66,14 @@ class TrafilaturaWebFetch(WebFetchProvider):
         if not kwargs.get('url'):
             return 'URL not found'
 
-        html_page = fetch_url(kwargs['url'])
+        url = kwargs['url']
+
+        if '127.0.0.1' in url or get_local_ip() in url:
+            return 'URL not permitted'
+
+        html_page = fetch_url(url)
         if not html_page:
-            return f"page from \"{kwargs['url']}\" not found"
+            return f"page from \"{url}\" not found"
 
         extracted_content = extract(
             html_page,
@@ -63,12 +82,12 @@ class TrafilaturaWebFetch(WebFetchProvider):
             include_comments=False
         )
         if not extracted_content:
-            return f"Extraction of \"{kwargs['url']}\" has failed"
+            return f"Extraction of \"{url}\" has failed"
 
         content = json.loads(extracted_content)
 
         return WebFetchResponse(
-            url=kwargs['url'],
+            url=url,
             title=content['title'],
             author=content['author'],
             date=content['date'],

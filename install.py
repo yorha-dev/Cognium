@@ -119,11 +119,14 @@ def install_frontend() -> None:
                 if not (frontend_tmp / 'index.html').exists():
                     raise SystemExit(error('Could not extract frontend package'))
 
-                # Copy old files to tmp dir (backup)
-                current_files = list(frontend_path.iterdir())
-
-                if 'index.html' in current_files:
+                
+                # Backup existent files
+                if (frontend_path / 'index.html').exists():
                     print(warning("Making backup of existing frontend..."))
+                    backup_path.mkdir(parents=True, exist_ok=True)
+
+                    # Copy old files to tmp dir (backup)
+                    current_files = list(frontend_path.iterdir())
 
                     for item in current_files:
                         if item.is_file():

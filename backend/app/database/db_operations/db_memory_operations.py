@@ -45,6 +45,9 @@ def update_memory(mem_id: int, **data):
             Memory.id == mem_id
         )).one_or_none()
 
+        if mem is None:
+            return None
+
         mem.content = data['content']
         mem.embedding = data['embedding']
         mem.used_model = data['used_model']

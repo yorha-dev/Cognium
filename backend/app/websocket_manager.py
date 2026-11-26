@@ -18,6 +18,7 @@ class WebSocketManager:
 
     def disconnect(self, ws: WebSocket) -> None:
         self._connections.discard(ws)
+        self._send_locks.pop(ws, None)
 
     async def send_json(
         self,

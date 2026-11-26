@@ -276,11 +276,20 @@ async def upload_files(
         os.makedirs(uploads_path, exist_ok=True)
     
     for file in data:
-        print(f"File name: {file.filename}")
+        filename = file.filename.split(PLATFORM_SLASH)[-1]
+
+        print(f"File name: {filename}")
         print(f"File mime: {file.content_type}")
         print(f"Save into: {uploads_path}")
 
-        file_path = os.path.join(uploads_path, file.filename.split(PLATFORM_SLASH)[-1])
+        file_path = os.path.join(uploads_path, filename)
+
+        file = db.get_document_by_name(filename)
+        if file:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"'{filename}' already exists"
+            )
 
         try:
             with open(

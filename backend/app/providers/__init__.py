@@ -1,5 +1,3 @@
-import asyncio
-
 from .ai_provider import ModelResponse, AIProvider, AIRegistry
 from .llamacpp.llamacpp_provider import LlamacppProvider, LlamacppEmbedProvider
 from .image_gen import SDCppProvider
@@ -86,5 +84,3 @@ async def bootstrap():
 
     # MCP Client Register
     await MCPClientRegistry().warmup()
-
-asyncio.run(bootstrap())

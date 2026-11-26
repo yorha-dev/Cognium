@@ -9,7 +9,7 @@ class ModelResponse:
     metadata: dict | None = None
 
 class AIProvider(ABC):
-    _model_name = None
+    _model_name = ''
     _model_path = None
     _model = None
 
@@ -25,23 +25,29 @@ class AIProvider(ABC):
         ...
 
     @property
-    def model_name(self):
+    def model_name(self) -> str:
         return self._model_name
 
-    def get_model_path(self):
+    def get_model_path(self) -> str:
         return self._model_path
 
-    def load_model(self, model_name: str, **config):
+    def load_model(self, model_name: str, **config) -> None:
         if self._model_name == model_name:
             return
 
+        self.dispose_model()
+        self._load(**config)
         self._model_name = model_name
 
-        self._load(**config)
-
     @abstractmethod
-    def _load(self, **config):
+    def _load(self, **config) -> None:
         ...
+
+    def dispose_model(self) -> None:
+        if self._model is not None:
+            del self._model
+            self._model_path = None
+            self._model_name = ''
 
     @abstractmethod
     def generate(self, model_name: str, **config):

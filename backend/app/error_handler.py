@@ -113,8 +113,6 @@ class ErrorHandler:
                 await self._sender(payload)
             except Exception:
                 logger.exception("Failed to dispatch error event")
-            finally:
-                self._task.cancel()
 
     async def stop(self) -> None:
         if self._task is not None:
